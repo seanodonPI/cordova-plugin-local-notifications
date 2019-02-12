@@ -23,6 +23,8 @@
 
 package de.appplant.cordova.plugin.notification;
 
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Color;
@@ -43,6 +45,8 @@ import de.appplant.cordova.plugin.notification.action.Action;
 import de.appplant.cordova.plugin.notification.action.ActionGroup;
 import de.appplant.cordova.plugin.notification.util.AssetUtil;
 
+import static android.os.Build.VERSION.SDK_INT;
+import static android.os.Build.VERSION_CODES.O;
 import static android.support.v4.app.NotificationCompat.DEFAULT_LIGHTS;
 import static android.support.v4.app.NotificationCompat.DEFAULT_SOUND;
 import static android.support.v4.app.NotificationCompat.DEFAULT_VIBRATE;
@@ -212,7 +216,21 @@ public final class Options {
      * The channel id of that notification.
      */
     String getChannel() {
-        return options.optString("channel", Manager.CHANNEL_ID);
+
+        // If channel is passed in or we have a low enough SDK for it not to matter, short-circuit.
+        if (options.optString("channel").isEmpty() || SDK_INT < O) {
+            return options.optString("channel", NotificationChannel.DEFAULT_CHANNEL_ID);
+        }
+        Uri soundUri = getSound();
+        boolean hasSound = !isWithoutSound();
+        boolean shouldVibrate = isWithVibration();
+        CharSequence channelName = options.optString("channelName", null);
+        String channelId = options.optString("channel");
+        int importance = options.optInt("importance", NotificationManager.IMPORTANCE_DEFAULT);
+
+        Manager.getInstance(context)
+            .buildChannelWithOptions(soundUri, shouldVibrate, hasSound, channelName, channelId, importance);
+        return channelId;
     }
 
     /**
